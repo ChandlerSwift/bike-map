@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chandler's Bike Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+        integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+        crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+        integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+        crossorigin=""></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.6.0/gpx.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: sans-serif;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        nav {
+            display: flex;
+            align-items: center;
+            background-color: lightgray;
+            height: 50px;
+        }
+
+        nav div {
+            padding: 20px;
+        }
+
+        nav .title {
+            font-size: large;
+            font-weight: bold;
+            margin-right: auto;
+        }
+
+        div.list {
+            width: max(20vw, 200px);
+            position: 0,0;
+            float: left;
+        }
+
+        #ride-list > div {
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        #ride-list > div:hover {
+            background-color: #eee;
+        }
+
+        #ride-list > div:active {
+            background-color: lightgray;
+        }
+
+        div.map {
+            height: calc(100vh - 50px);
+        }
+
+        div.ride-details {
+            margin: 10px;
+            padding: 10px;
+            border-left: 5px solid lightgray;
+        }
+        div.ride-details.no-show {
+            display: none;
+        }
+        table th {
+            text-align: left;
+            padding-right: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <nav>
+        <div class="title">Chandler's Bike Map</div>
+        <div><a href="https://www.strava.com/athletes/chandlerswift">Strava</a></div>
+        <div><a href="https://github.com/chandlerswift/bike-map">GitHub</a></div>
+    </nav>
+    <div class="container">
+        <div class="list" id="ride-list"></div>
+        <div class="map" id="map"></div>
+    </div>
+    <template id="ride-details-table">
+        <table>
+            <tr><th>Distance</th><td class="distance"></td></tr>
+            <tr><th>Moving Time</th><td class="moving-time"></td></tr>
+            <tr><th>Total Time</th><td class="total-time"></td></tr>
+            <tr><th>Moving Speed</th><td class="moving-speed"></td></tr>
+            <tr><th>Moving Pace</th><td class="moving-pace"></td></tr>
+            <tr><th>Elevation Gain</th><td class="elevation-gain"></td></tr>
+            <tr class="hr-row"><th>Average Heart Rate</th><td class="average-heart-rate"></td></tr>
+        </table>
+    </template>
+    <script>
+        function round(val, decimal_places = 1) {
+            const mul = Math.pow(10, decimal_places);
+            return Math.round(val * mul) / mul;
+        }
+        (async function () {
+            const map = L.map('map', { fullscreenControl: true })
+                // if we set the location right the first time, it won't move the
+                // map around after the geojson has loaded. (get these coords with
+                // `map.getCenter()` after `map.fitBounds()`.)
+                .setView([44.80400643476691, -93.24800491333009], 13);
+
+            let open_details_div;
+
+            let gpxfiles = ["rides/2021-09-02.gpx", "rides/2021-09-05.gpx", "rides/2021-09-07.gpx", "rides/2021-09-09.gpx", "rides/2021-09-10.gpx"];
+            for (let gpxfile of gpxfiles) {
+                let gpx = new L.GPX(gpxfile, {
+                    async: true,
+                    marker_options: {
+                        startIconUrl: '',
+                        endIconUrl: '',
+                        shadowUrl: '',
+                    }
+                }).on('loaded', function(e) {
+                    let list_item = document.createElement("div");
+                    let dist = Math.round(gpx.get_distance_imp() * 10) / 10;
+                    list_item.innerText = `${gpx.get_name()} (${gpx.get_start_time().toLocaleDateString()}, ${dist} miles)`;
+
+                    let details = document.createElement("div");
+                    details.classList.add("ride-details", "no-show");
+                    details.appendChild(document.getElementById("ride-details-table").content.cloneNode('true'));
+                    details.querySelector(".distance").innerText = `${dist} miles`;
+                    details.querySelector(".moving-time").innerText = gpx.get_duration_string_iso(gpx.get_moving_time());
+                    details.querySelector(".total-time").innerText = gpx.get_duration_string_iso(gpx.get_total_time());
+                    details.querySelector(".moving-speed").innerText = `${round(gpx.get_moving_speed())} mph`;
+                    details.querySelector(".moving-pace").innerText = gpx.get_duration_string_iso(gpx.get_moving_pace(), true);
+                    details.querySelector(".elevation-gain").innerText = `${round(gpx.get_elevation_gain_imp(), 0)} feet`;
+                    if (gpx.get_average_hr()) {
+                        details.querySelector(".average-heart-rate").innerText = gpx.get_average_hr();
+                    } else {
+                        details.querySelector(".hr-row").remove();
+                    }
+
+                    list_item.addEventListener('click', function() {
+                        if (open_details_div) {
+                            open_details_div.classList.add('no-show');
+                        }
+                        details.classList.remove('no-show');
+                        open_details_div = details;
+                        map.fitBounds(e.target.getBounds()), {duration: 2};
+                    });
+                    list_item.appendChild(details);
+                    document.getElementById("ride-list").appendChild(list_item);
+
+                }).addTo(map);
+            }
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(map);
+        })();
+    </script>
+</body>
+
+</html>
