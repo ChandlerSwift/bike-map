@@ -116,12 +116,16 @@
             const mul = Math.pow(10, decimal_places);
             return Math.round(val * mul) / mul;
         }
+
+        let map;
+        let total_bounds = L.latLngBounds();
+
         (async function () {
-            const map = L.map('map', { fullscreenControl: true })
-                // if we set the location right the first time, it won't move the
-                // map around after the geojson has loaded. (get these coords with
-                // `map.getCenter()` after `map.fitBounds()`.)
-                .setView([44.80400643476691, -93.24800491333009], 13);
+            map = L.map('map', { fullscreenControl: true })
+                // If we set the location right away, it won't move the map
+                // around after the gpx files have loaded. (Get these coords
+                // with `map.getCenter()` after `map.fitBounds(total_bounds)`.)
+                .setView([44.8507371730639, -93.83118600000002], 10);
 
             let open_details_div;
 
@@ -160,11 +164,12 @@
                         }
                         details.classList.remove('no-show');
                         open_details_div = details;
-                        map.fitBounds(e.target.getBounds()), {duration: 2};
+                        map.fitBounds(gpx.getBounds()), {duration: 2};
                     });
                     list_item.appendChild(details);
                     document.getElementById("ride-list").appendChild(list_item);
 
+                    total_bounds.extend(gpx.getBounds());
                 }).addTo(map);
             }
 
