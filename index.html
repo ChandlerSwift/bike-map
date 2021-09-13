@@ -128,6 +128,7 @@
                 .setView([44.8507371730639, -93.83118600000002], 10);
 
             let open_details_div;
+            let all_layers = [];
 
             let gpxfiles = ["rides/2021-09-02.gpx", "rides/2021-09-05.gpx", "rides/2021-09-07.gpx", "rides/2021-09-09.gpx", "rides/2021-09-10.gpx"];
             for (let gpxfile of gpxfiles) {
@@ -139,6 +140,7 @@
                         shadowUrl: '',
                     }
                 }).on('loaded', function(e) {
+                    all_layers.push(gpx);
                     let list_item = document.createElement("div");
                     let dist = Math.round(gpx.get_distance_imp() * 10) / 10;
                     list_item.innerText = `${gpx.get_name()} (${gpx.get_start_time().toLocaleDateString()}, ${dist} miles)`;
@@ -159,6 +161,10 @@
                     }
 
                     list_item.addEventListener('click', function() {
+                        for (let layer of all_layers) {
+                            layer.removeFrom(map);
+                        }
+                        gpx.addTo(map);
                         if (open_details_div) {
                             open_details_div.classList.add('no-show');
                         }
