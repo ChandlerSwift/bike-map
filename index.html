@@ -176,7 +176,7 @@
                 details.querySelector(".total-time").innerText = gpx.get_duration_string_iso(gpx.get_total_time());
                 totals.total_time += gpx.get_total_time();
                 totals.total_time_str = gpx.get_duration_string_iso(totals.total_time); // TODO
-                details.querySelector(".moving-speed").innerText = `${round(gpx.get_moving_speed())} mph`;
+                details.querySelector(".moving-speed").innerText = `${round(gpx.get_moving_speed_imp())} mph`;
                 details.querySelector(".moving-pace").innerText = gpx.get_duration_string_iso(gpx.get_moving_pace(), true);
                 details.querySelector(".elevation-gain").innerText = `${round(gpx.get_elevation_gain_imp(), 0)} feet`;
                 totals.elevation_gain += gpx.get_elevation_gain_imp();
