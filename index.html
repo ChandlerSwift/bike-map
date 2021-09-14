@@ -87,6 +87,9 @@
             text-align: left;
             padding-right: 10px;
         }
+        #total-stats, #loading-indicator {
+            border-bottom: 1px solid gray;
+        }
     </style>
 </head>
 
@@ -97,7 +100,21 @@
         <div><a href="https://github.com/chandlerswift/bike-map">GitHub</a></div>
     </nav>
     <div class="container">
-        <div class="list" id="ride-list"></div>
+        <div class="list" id="ride-list">
+            <div id="loading-indicator">Loading <span id="load-count">0</span> of <span id="load-total">0</span>&hellip;</div>
+            <div id="total-stats" style="display: none;">
+                Display All Rides
+                <div class="ride-details">
+                    <table>
+                        <tr><th>Rides</th><td id="ride-count"></td></tr>
+                        <tr><th>Distance</th><td class="distance"></td></tr>
+                        <tr><th>Moving Time</th><td class="moving-time"></td></tr>
+                        <tr><th>Total Time</th><td class="total-time"></td></tr>
+                        <tr><th>Elevation Gain</th><td class="elevation-gain"></td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
         <div class="map" id="map"></div>
     </div>
     <template id="ride-details-table">
@@ -131,53 +148,79 @@
             let all_layers = [];
 
             let gpxfiles = ["rides/2021-09-02.gpx", "rides/2021-09-05.gpx", "rides/2021-09-07.gpx", "rides/2021-09-09.gpx", "rides/2021-09-10.gpx"];
-            for (let gpxfile of gpxfiles) {
+            document.getElementById("load-total").innerText = gpxfiles.length;
+            document.getElementById("ride-count").innerText = gpxfiles.length;
+            totals = {distance: 0, moving_time: 0, moving_time_str: "", total_time: 0, total_time_str: "", elevation_gain: 0};
+            gpxfiles.forEach(function(gpxfile, i){
+                document.getElementById("load-count").innerText = i + 1;
                 let gpx = new L.GPX(gpxfile, {
-                    async: true,
                     marker_options: {
                         startIconUrl: '',
                         endIconUrl: '',
                         shadowUrl: '',
                     }
-                }).on('loaded', function(e) {
-                    all_layers.push(gpx);
-                    let list_item = document.createElement("div");
-                    let dist = Math.round(gpx.get_distance_imp() * 10) / 10;
-                    list_item.innerText = `${gpx.get_name()} (${gpx.get_start_time().toLocaleDateString()}, ${dist} miles)`;
+                });
 
-                    let details = document.createElement("div");
-                    details.classList.add("ride-details", "no-show");
-                    details.appendChild(document.getElementById("ride-details-table").content.cloneNode('true'));
-                    details.querySelector(".distance").innerText = `${dist} miles`;
-                    details.querySelector(".moving-time").innerText = gpx.get_duration_string_iso(gpx.get_moving_time());
-                    details.querySelector(".total-time").innerText = gpx.get_duration_string_iso(gpx.get_total_time());
-                    details.querySelector(".moving-speed").innerText = `${round(gpx.get_moving_speed())} mph`;
-                    details.querySelector(".moving-pace").innerText = gpx.get_duration_string_iso(gpx.get_moving_pace(), true);
-                    details.querySelector(".elevation-gain").innerText = `${round(gpx.get_elevation_gain_imp(), 0)} feet`;
-                    if (gpx.get_average_hr()) {
-                        details.querySelector(".average-heart-rate").innerText = gpx.get_average_hr();
-                    } else {
-                        details.querySelector(".hr-row").remove();
+                all_layers.push(gpx);
+                let list_item = document.createElement("div");
+                list_item.innerText = `${gpx.get_name()} (${gpx.get_start_time().toLocaleDateString()}, ${round(gpx.get_distance_imp())} miles)`;
+
+                let details = document.createElement("div");
+                details.classList.add("ride-details", "no-show");
+                details.appendChild(document.getElementById("ride-details-table").content.cloneNode('true'));
+                details.querySelector(".distance").innerText = `${round(gpx.get_distance_imp())} miles`;
+                totals.distance += gpx.get_distance_imp();
+                details.querySelector(".moving-time").innerText = gpx.get_duration_string_iso(gpx.get_moving_time());
+                totals.moving_time += gpx.get_moving_time();
+                totals.moving_time_str = gpx.get_duration_string_iso(totals.moving_time); // TODO
+                details.querySelector(".total-time").innerText = gpx.get_duration_string_iso(gpx.get_total_time());
+                totals.total_time += gpx.get_total_time();
+                totals.total_time_str = gpx.get_duration_string_iso(totals.total_time); // TODO
+                details.querySelector(".moving-speed").innerText = `${round(gpx.get_moving_speed())} mph`;
+                details.querySelector(".moving-pace").innerText = gpx.get_duration_string_iso(gpx.get_moving_pace(), true);
+                details.querySelector(".elevation-gain").innerText = `${round(gpx.get_elevation_gain_imp(), 0)} feet`;
+                totals.elevation_gain += gpx.get_elevation_gain_imp();
+                if (gpx.get_average_hr()) {
+                    details.querySelector(".average-heart-rate").innerText = gpx.get_average_hr();
+                } else {
+                    details.querySelector(".hr-row").remove();
+                }
+
+                list_item.addEventListener('click', function() {
+                    for (let layer of all_layers) {
+                        layer.removeFrom(map);
                     }
+                    gpx.addTo(map);
+                    if (open_details_div) {
+                        open_details_div.classList.add('no-show');
+                    }
+                    details.classList.remove('no-show');
+                    open_details_div = details;
+                    map.fitBounds(gpx.getBounds()), {duration: 2};
+                });
+                list_item.appendChild(details);
+                document.getElementById("ride-list").appendChild(list_item);
 
-                    list_item.addEventListener('click', function() {
-                        for (let layer of all_layers) {
-                            layer.removeFrom(map);
-                        }
-                        gpx.addTo(map);
-                        if (open_details_div) {
-                            open_details_div.classList.add('no-show');
-                        }
-                        details.classList.remove('no-show');
-                        open_details_div = details;
-                        map.fitBounds(gpx.getBounds()), {duration: 2};
-                    });
-                    list_item.appendChild(details);
-                    document.getElementById("ride-list").appendChild(list_item);
+                total_bounds.extend(gpx.getBounds());
+                gpx.addTo(map);
+            });
+            document.getElementById("loading-indicator").remove();
+            const total_stats = document.getElementById("total-stats");
+            total_stats.querySelector(".distance").innerText = `${round(totals.distance)} miles`;
+            total_stats.querySelector(".moving-time").innerText = totals.moving_time_str;
+            total_stats.querySelector(".total-time").innerText = totals.total_time_str;
+            total_stats.querySelector(".elevation-gain").innerText = `${round(totals.elevation_gain, 0)} feet`;
+            total_stats.style.display = "";
+            total_stats.addEventListener("click", function() {
+                for (let layer of all_layers) {
+                    layer.addTo(map);
+                    map.fitBounds(total_bounds);
+                }
+                if (open_details_div) {
+                    open_details_div.classList.add('no-show');
+                }
+            });
 
-                    total_bounds.extend(gpx.getBounds());
-                }).addTo(map);
-            }
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(map);
         })();
