@@ -131,32 +131,34 @@
         let map;
         let total_bounds = L.latLngBounds();
 
-        (async function () {
-            map = L.map('map', { fullscreenControl: true })
-                // If we set the location right away, it won't move the map
-                // around after the gpx files have loaded. (Get these coords
-                // with `map.getCenter()` after `map.fitBounds(total_bounds)`.)
-                .setView([44.8507371730639, -93.83118600000002], 10);
+        map = L.map('map', { fullscreenControl: true })
+            // If we set the location right away, it won't move the map
+            // around after the gpx files have loaded. (Get these coords
+            // with `map.getCenter()` after `map.fitBounds(total_bounds)`.)
+            .setView([44.8507371730639, -93.83118600000002], 10);
 
-            let open_details_div;
-            let all_layers = [];
+        let open_details_div;
+        let all_layers = [];
 
-            let gpxfiles = ["rides/2021-09-02.gpx", "rides/2021-09-05.gpx", "rides/2021-09-07.gpx", "rides/2021-09-09.gpx", "rides/2021-09-10.gpx", "rides/2021-09-13.gpx"];
-            document.getElementById("load-total").innerText = gpxfiles.length;
-            document.getElementById("ride-count").innerText = gpxfiles.length;
-            totals = {distance: 0, moving_time: 0, moving_time_str: "", total_time: 0, total_time_str: "", elevation_gain: 0};
-            gpxfiles.forEach(function(gpxfile, i){
-                document.getElementById("load-count").innerText = i + 1;
-                let gpx = new L.GPX(gpxfile, {
-                    marker_options: {
-                        startIconUrl: '',
-                        endIconUrl: '',
-                        shadowUrl: '',
-                    }
-                });
+        let gpxfiles = ["rides/2021-09-02.gpx", "rides/2021-09-05.gpx", "rides/2021-09-07.gpx", "rides/2021-09-09.gpx", "rides/2021-09-10.gpx", "rides/2021-09-13.gpx"];
+        document.getElementById("load-total").innerText = gpxfiles.length;
+        document.getElementById("ride-count").innerText = gpxfiles.length;
+        totals = {distance: 0, moving_time: 0, moving_time_str: "", total_time: 0, total_time_str: "", elevation_gain: 0};
+        gpxfiles.forEach(function(gpxfile, i){
+            // This needs to be done in the synchronous part so the entries stay
+            // in order even if they load out of order.
+            let list_item = document.createElement("div");
+            document.getElementById("ride-list").appendChild(list_item);
 
+            let gpx = new L.GPX(gpxfile, {
+                async: true,
+                marker_options: {
+                    startIconUrl: '',
+                    endIconUrl: '',
+                    shadowUrl: '',
+                }
+            }).on("loaded", function() {
                 all_layers.push(gpx);
-                let list_item = document.createElement("div");
                 list_item.innerText = `${gpx.get_name()} (${gpx.get_start_time().toLocaleDateString()}, ${round(gpx.get_distance_imp())} miles)`;
 
                 let details = document.createElement("div");
@@ -193,31 +195,34 @@
                     map.fitBounds(gpx.getBounds()), {duration: 2};
                 });
                 list_item.appendChild(details);
-                document.getElementById("ride-list").appendChild(list_item);
 
                 total_bounds.extend(gpx.getBounds());
                 gpx.addTo(map);
-            });
-            document.getElementById("loading-indicator").remove();
-            const total_stats = document.getElementById("total-stats");
-            total_stats.querySelector(".distance").innerText = `${round(totals.distance)} miles`;
-            total_stats.querySelector(".moving-time").innerText = totals.moving_time_str;
-            total_stats.querySelector(".total-time").innerText = totals.total_time_str;
-            total_stats.querySelector(".elevation-gain").innerText = `${round(totals.elevation_gain, 0)} feet`;
-            total_stats.classList.remove("no-show");
-            total_stats.addEventListener("click", function() {
-                for (let layer of all_layers) {
-                    layer.addTo(map);
-                    map.fitBounds(total_bounds);
-                }
-                if (open_details_div) {
-                    open_details_div.classList.add('no-show');
-                }
-            });
 
+                if (all_layers.length < gpxfiles.length) { // More to come
+                    document.getElementById("load-count").innerText = all_layers.length;
+                } else { // this is the last one, finalize the totals
+                    document.getElementById("loading-indicator").remove();
+                    const total_stats = document.getElementById("total-stats");
+                    total_stats.querySelector(".distance").innerText = `${round(totals.distance)} miles`;
+                    total_stats.querySelector(".moving-time").innerText = totals.moving_time_str;
+                    total_stats.querySelector(".total-time").innerText = totals.total_time_str;
+                    total_stats.querySelector(".elevation-gain").innerText = `${round(totals.elevation_gain, 0)} feet`;
+                    total_stats.classList.remove("no-show");
+                    total_stats.addEventListener("click", function() {
+                        for (let layer of all_layers) {
+                            layer.addTo(map);
+                            map.fitBounds(total_bounds);
+                        }
+                        if (open_details_div) {
+                            open_details_div.classList.add('no-show');
+                        }
+                    });
+                }
+            });
+        });
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(map);
-        })();
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(map);
     </script>
 </body>
 
