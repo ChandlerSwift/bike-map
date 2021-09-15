@@ -135,7 +135,8 @@
             // If we set the location right away, it won't move the map
             // around after the gpx files have loaded. (Get these coords
             // with `map.getCenter()` after `map.fitBounds(total_bounds)`.)
-            .setView([44.8507371730639, -93.83118600000002], 10);
+            // https://xkcd.com/2170/
+            .setView([44.804, -93.248], 10);
 
         let open_details_div;
         let all_layers = [];
