@@ -121,6 +121,7 @@
             <tr><th>Elevation Gain</th><td class="elevation-gain"></td></tr>
             <tr class="hr-row"><th>Average Heart Rate</th><td class="average-heart-rate"></td></tr>
         </table>
+        <div class="description"></div>
     </template>
     <script>
         function round(val, decimal_places = 1) {
@@ -176,6 +177,7 @@
                 details.querySelector(".moving-speed").innerText = `${round(gpx.get_moving_speed_imp())} mph`;
                 details.querySelector(".moving-pace").innerText = gpx.get_duration_string_iso(gpx.get_moving_pace(), true);
                 details.querySelector(".elevation-gain").innerText = `${round(gpx.get_elevation_gain_imp(), 0)} feet`;
+                details.querySelector(".description").innerText = gpx.get_desc();
                 totals.elevation_gain += gpx.get_elevation_gain_imp();
                 if (gpx.get_average_hr()) {
                     details.querySelector(".average-heart-rate").innerText = gpx.get_average_hr();
