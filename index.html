@@ -25,12 +25,8 @@
             font-family: sans-serif;
         }
 
-        a {
+        a:not(:hover) {
             text-decoration: none;
-        }
-
-        a:hover {
-            text-decoration: underline;
         }
 
         nav {
@@ -50,8 +46,8 @@
             margin-right: auto;
         }
 
-        div.list {
-            width: max(20vw, 200px);
+        #ride-list {
+            width: max(20vw, 250px);
             position: 0,0;
             float: left;
             height: calc(100vh - 50px);
@@ -71,7 +67,7 @@
             background-color: lightgray;
         }
 
-        div.map {
+        #map {
             height: calc(100vh - 50px);
         }
 
@@ -80,7 +76,7 @@
             padding: 10px;
             border-left: 5px solid lightgray;
         }
-        div.ride-details.no-show {
+        .no-show {
             display: none;
         }
         table th {
@@ -99,24 +95,22 @@
         <div><a href="https://www.strava.com/athletes/chandlerswift">Strava</a></div>
         <div><a href="https://github.com/chandlerswift/bike-map">GitHub</a></div>
     </nav>
-    <div class="container">
-        <div class="list" id="ride-list">
-            <div id="loading-indicator">Loading <span id="load-count">0</span> of <span id="load-total">0</span>&hellip;</div>
-            <div id="total-stats" style="display: none;">
-                Display All Rides
-                <div class="ride-details">
-                    <table>
-                        <tr><th>Rides</th><td id="ride-count"></td></tr>
-                        <tr><th>Distance</th><td class="distance"></td></tr>
-                        <tr><th>Moving Time</th><td class="moving-time"></td></tr>
-                        <tr><th>Total Time</th><td class="total-time"></td></tr>
-                        <tr><th>Elevation Gain</th><td class="elevation-gain"></td></tr>
-                    </table>
-                </div>
+    <div id="ride-list">
+        <div id="loading-indicator">Loading <span id="load-count">0</span> of <span id="load-total">0</span>&hellip;</div>
+        <div id="total-stats" class="no-show">
+            Display All Rides
+            <div class="ride-details">
+                <table>
+                    <tr><th>Rides</th><td id="ride-count"></td></tr>
+                    <tr><th>Distance</th><td class="distance"></td></tr>
+                    <tr><th>Moving Time</th><td class="moving-time"></td></tr>
+                    <tr><th>Total Time</th><td class="total-time"></td></tr>
+                    <tr><th>Elevation Gain</th><td class="elevation-gain"></td></tr>
+                </table>
             </div>
         </div>
-        <div class="map" id="map"></div>
     </div>
+    <div id="map"></div>
     <template id="ride-details-table">
         <table>
             <tr><th>Distance</th><td class="distance"></td></tr>
@@ -210,7 +204,7 @@
             total_stats.querySelector(".moving-time").innerText = totals.moving_time_str;
             total_stats.querySelector(".total-time").innerText = totals.total_time_str;
             total_stats.querySelector(".elevation-gain").innerText = `${round(totals.elevation_gain, 0)} feet`;
-            total_stats.style.display = "";
+            total_stats.classList.remove("no-show");
             total_stats.addEventListener("click", function() {
                 for (let layer of all_layers) {
                     layer.addTo(map);
